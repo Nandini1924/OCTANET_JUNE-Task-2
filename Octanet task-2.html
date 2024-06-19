@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>To-Do List</h1>
+        <div class="task-input">
+            <input type="text" id="task" placeholder="Add a new task...">
+            <input type="date" id="due-date">
+            <select id="priority">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+            <button id="add-task">Add Task</button>
+        </div>
+        <div class="filter">
+            <label for="filter-priority">Filter by priority: </label>
+            <select id="filter-priority">
+                <option value="all">All</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+        <div class="tasks">
+            <ul id="task-list"></ul>
+        </div>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: white;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+.task-input, .filter {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.task-input input, .task-input select, .task-input button {
+    padding: 10px;
+    font-size: 16px;
+    margin: 5px;
+}
+
+.task-input input[type="text"] {
+    flex: 1;
+}
+
+.task-input button {
+    background-color: #5cb85c;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.task-input button:hover {
+    background-color: #4cae4c;
+}
+
+.filter select {
+    padding: 10px;
+    font-size: 16px;
+}
+
+.tasks ul {
+    list-style: none;
+    padding: 0;
+}
+
+.tasks li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+.tasks li.complete {
+    text-decoration: line-through;
+    color: #777;
+}
+
+.tasks li button {
+    background: none;
+    border: none;
+    color: #d9534f;
+    cursor: pointer;
+}
+
+.tasks li button:hover {
+    color: #c9302c;
+}
+
+.tasks li button.edit {
+    color: #f0ad4e;
+}
+
+.tasks li button.edit:hover {
+    color: #ec971f;
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const taskInput = document.getElementById('task');
+    const dueDateInput = document.getElementById('due-date');
+    const priorityInput = document.getElementById('priority');
+    const taskList = document.getElementById('task-list');
+    const filterPriority = document.getElementById('filter-priority');
+
+    // Load tasks from local storage
+    loadTasks();
+
+    document.getElementById('add-task').addEventListener('click', function() {
+        const taskText = taskInput.value;
+        const dueDate = dueDateInput.value;
+        const priority = priorityInput.value;
+
+        if (taskText === '') {
+            alert('Please enter a task.');
+            return;
+        }
+
+        addTask(taskText, dueDate, priority);
+        saveTasks();
+        taskInput.value = '';
+        dueDateInput.value = '';
+    });
+
+    filterPriority.addEventListener('change', function() {
+        filterTasks();
+    });
+
+    function addTask(taskText, dueDate, priority, isComplete = false) {
+        const listItem = document.createElement('li');
+        listItem.classList.add(priority);
+        if (isComplete) {
+            listItem.classList.add('complete');
+        }
+
+        const taskDetails = document.createElement('span');
+        taskDetails.textContent = `${taskText} (Due: ${dueDate})`;
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', function() {
+            taskList.removeChild(listItem);
+            saveTasks();
+        });
+
+        const completeButton = document.createElement('button');
+        completeButton.textContent = 'Complete';
+        completeButton.addEventListener('click', function() {
+            listItem.classList.toggle('complete');
+            saveTasks();
+        });
+
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.classList.add('edit');
+        editButton.addEventListener('click', function() {
+            taskInput.value = taskText;
+            dueDateInput.value = dueDate;
+            priorityInput.value = priority;
+            taskList.removeChild(listItem);
+            saveTasks();
+        });
+
+        listItem.appendChild(taskDetails);
+        listItem.appendChild(completeButton);
+        listItem.appendChild(editButton);
+        listItem.appendChild(deleteButton);
+
+        taskList.appendChild(listItem);
+        filterTasks();
+    }
+
+    function filterTasks() {
+        const filterValue = filterPriority.value;
+        const tasks = taskList.getElementsByTagName('li');
+        Array.from(tasks).forEach(function(task) {
+            if (filterValue === 'all' || task.classList.contains(filterValue)) {
+                task.style.display = '';
+            } else {
+                task.style.display = 'none';
+            }
+        });
+    }
+
+    function saveTasks() {
+        const tasks = [];
+        const taskItems = taskList.getElementsByTagName('li');
+        Array.from(taskItems).forEach(function(task) {
+            const taskText = task.querySelector('span').textContent.split(' (Due: ')[0];
+            const dueDate = task.querySelector('span').textContent.split(' (Due: ')[1].slice(0, -1);
+            const priority = task.classList[0];
+            const isComplete = task.classList.contains('complete');
+            tasks.push({ taskText, dueDate, priority, isComplete });
+        });
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function loadTasks() {
+        const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        tasks.forEach(function(task) {
+            addTask(task.taskText, task.dueDate, task.priority, task.isComplete);
+        });
+    }
+});
